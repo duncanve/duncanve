@@ -1,0 +1,69 @@
+--- 
+- hosts: 127.0.0.1
+  vars:
+          username: "empty"      
+    
+
+  tasks: 
+     - name: remove apt packages 
+       ansible.builtin.apt:
+        name: [ "firefox","thunderbird" ]
+        state: absent
+
+     - name: add Edge key 
+       ansible.builtin.apt_key: 
+         url: https://packages.microsoft.com/keys/microsoft.asc  
+         state: present 
+       tags: edge
+
+     - name: add edge repo 
+       apt_repository: 
+        repo: deb https://packages.microsoft.com/repos/edge stable main
+        state: present 
+        update_cache: yes
+       tags: edge
+
+     - name: install edge
+       apt: 
+        name: ['microsoft-edge-stable'] 
+        state: latest 
+       tags: edge 
+
+
+     - name: install python 3.8 
+       apt: 
+         name: ['python3.8','python3-distutils','python3.8-dev'] 
+         state: latest
+       when: ansible_distribution_version == "20.04"
+       tags: python
+
+     - name: install python 3.10 
+       apt: 
+         name: ['python3.10','python3-distutils','python3.10-dev'] 
+         state: latest  
+       when: ansible_distribution_version == "22.04"
+       tags: python 
+
+     - name: add mutliverse for steam 
+       shell: add-apt-repository multiverse -y
+       become_user: root
+       become: true 
+       tags: steam
+
+     - name: install apt packages 
+       apt: 
+         name: ['openssh-server','steam','snapd','firefox','chromium-browser','vlc','htop',] 
+         state: latest 
+
+     - name: install pycharm-community 
+       shell: snap install pycharm-community --classic
+       tags: pycharm 
+
+
+     - name: apt upgrade
+       apt: 
+        upgrade: yes 
+       tags: upgrade
+
+     - name:   
+

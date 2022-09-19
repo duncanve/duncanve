@@ -1,0 +1,93 @@
+---
+- hosts: localhost
+  become: true 
+
+  vars:
+    install_disk:  "{{ install_disk }}" 
+
+  tasks: 
+    - name: Read device info 
+      community.general.parted: device={{ install_disk }} unit=MiB
+      register: disk_info 
+
+    - name: remove all par from dior 
+      community.general.parted:
+              device:  '{{ install_disk }}'
+              number:  '{{ item.num }}'
+              state: absent 
+            loop: "{{ disk_info.partitions }}" 
+
+    - name: debug
+      ansibel.builtin.debug: 
+       var: install_disk 
+       verbosity: 2
+
+    - name: create EFI partition
+      community.general.parted:
+        device: '{{ install_disk }}'
+        number: 1
+        state: present
+        fs_type: fat32
+        label: gpt
+        part_type: primary
+        part_end: 1000MiB
+
+
+     - name: create luks partition
+      community.general.parted:
+        device: '{{ install_disk }}'
+        number: 2
+        label: gpt
+        part_start: 1000MiB
+        part_type: primary
+        state: present
+
+
+     - name: Create LUKS container with a passphrase
+      community.crypto.luks_device:
+        device: "{{ install_disk  }}p2"
+        passphrase: '{{ passphrase }}'
+        state: opened
+        name: crypt_tazzz
+
+     - name: create volumegroup 
+       lvg:
+           vg: vgroot
+           pvs:  "/dev/mapper/crypt_tazzz"
+           pesize: 32 
+    
+
+# You can adjust the size to a size you want so for example if you don't want a 80G root partition you can change the size to 40G or whatever you would like :)
+
+
+
+    - name: create root lv 
+      community.general.lvol:
+        vg: vgroot
+        lv: root
+        size: 80G
+   
+    - name: create home lv 
+      community.general.lvol:
+        vg: vgroot 
+        lv: home 
+        size: 200G
+
+    - name: create swap 
+      community.general.lvol:
+        vg: vgroot
+        lv: swap 
+        size: 32G
+
+
+    - name: create var
+      community.general.lvol:
+        vg: vgroot
+        lv: var
+        size: 50G 
+
+
+
+
+                    
+
